@@ -20,11 +20,94 @@ async function api(path, opts = {}) {
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const linkify = (s) => esc(s).replace(/https?:\/\/[^\s<]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
 const tw = (iso) => new Date(iso).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 
-function render(r) {
+function setOnline(on) {
+  $('status').innerHTML = on ? '<span class="dot"></span>在線上' : '<span class="dot off"></span>離線中（電腦可能關機）';
+  $('offline').classList.toggle('hidden', on);
+}
+
+// ---------- 分頁 ----------
+
+let tab = 'chat';
+function showTab(name) {
+  tab = name;
+  for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.tab === name);
+  $('chat').classList.toggle('hidden', name !== 'chat');
+  $('chips').classList.toggle('hidden', name !== 'chat');
+  $('composer').classList.toggle('hidden', name !== 'chat');
+  $('report').classList.toggle('hidden', name !== 'report');
+  name === 'chat' ? loadChat() : loadReport();
+}
+for (const b of document.querySelectorAll('#tabs button')) b.onclick = () => showTab(b.dataset.tab);
+
+// ---------- 對話 ----------
+
+let messages = [];
+let pollTimer = null;
+const waiting = () => messages.length && messages.at(-1).role === 'user';
+
+function renderChat() {
+  const box = $('msgs');
+  const atBottom = $('chat').scrollHeight - $('chat').scrollTop - $('chat').clientHeight < 80;
+  box.innerHTML = messages.length
+    ? messages.map((m) => `<div class="msg ${m.role}">${linkify(m.text)}<time>${tw(m.time)}</time></div>`).join('')
+      + (waiting() ? '<div class="typing">秘書處理中…</div>' : '')
+    : '<p class="hint">交代秘書事情，例如「今天有什麼行程」「摘要今天的郵件」。處理比較久時，回覆好了會傳通知給你。</p>';
+  if (atBottom || waiting()) $('chat').scrollTop = $('chat').scrollHeight;
+}
+
+async function loadChat() {
+  const cached = store.get('chat');
+  if (cached && !messages.length) { messages = JSON.parse(cached); renderChat(); }
+  try {
+    const list = await api('/chat');
+    setOnline(true);
+    if (JSON.stringify(list) !== JSON.stringify(messages)) { messages = list; store.set('chat', JSON.stringify(list)); renderChat(); }
+  } catch (e) {
+    if (e.auth) return showLogin('密碼失效，請重新輸入');
+    setOnline(false);
+  }
+  clearTimeout(pollTimer);
+  if (waiting() && tab === 'chat' && !document.hidden) pollTimer = setTimeout(loadChat, 3000);
+}
+
+async function send(text) {
+  text = text.trim();
+  if (!text) return;
+  $('sendBtn').disabled = true;
+  try {
+    const msg = await api('/chat', { method: 'POST', body: JSON.stringify({ text }) });
+    messages.push(msg);
+    $('input').value = '';
+    autosize();
+    renderChat();
+    $('chat').scrollTop = $('chat').scrollHeight;
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(loadChat, 3000);
+  } catch (e) {
+    alert(e.auth ? '密碼失效' : '送不出去，秘書可能離線了');
+  } finally {
+    $('sendBtn').disabled = false;
+  }
+}
+
+function autosize() {
+  const t = $('input');
+  t.style.height = 'auto';
+  t.style.height = Math.min(t.scrollHeight, 120) + 'px';
+}
+$('input').addEventListener('input', autosize);
+$('sendBtn').onclick = () => send($('input').value);
+for (const b of document.querySelectorAll('#chips button')) b.onclick = () => send(b.textContent);
+
+// ---------- 粉專報告 ----------
+
+function renderReport(r) {
   if (!r || r.empty) { $('stats').innerHTML = '<p class="hint">還沒有報告</p>'; return; }
-  $('updated').textContent = `${r.page.name}｜追蹤 ${r.page.followers}｜更新於 ${tw(r.generatedAt)}`;
+  $('pageTitle').textContent = `${r.page.name} 近 7 天`;
+  $('updated').textContent = `追蹤 ${r.page.followers}｜更新於 ${tw(r.generatedAt)}`;
   const show = ['page_media_view', 'page_total_media_view_unique', 'page_post_engagements', 'page_daily_follows_unique'];
   $('stats').innerHTML = r.metrics.filter((m) => show.includes(m.key)).map((m) => {
     const diff = m.prevWeek ? Math.round(((m.week - m.prevWeek) / m.prevWeek) * 100) : null;
@@ -43,29 +126,36 @@ function render(r) {
   ).join('');
 }
 
-async function load() {
+async function loadReport() {
   const cached = store.get('report');
-  if (cached) render(JSON.parse(cached));
+  if (cached) renderReport(JSON.parse(cached));
   try {
     const r = await api('/report');
     store.set('report', JSON.stringify(r));
-    render(r);
-    $('offline').classList.add('hidden');
+    renderReport(r);
+    setOnline(true);
   } catch (e) {
     if (e.auth) return showLogin('密碼失效，請重新輸入');
-    $('offline').classList.remove('hidden');
+    setOnline(false);
   }
 }
+$('refreshBtn').onclick = loadReport;
+$('testBtn').onclick = async () => {
+  try { const r = await api('/test-push', { method: 'POST' }); alert(r.sent ? '已送出測試通知' : '還沒有開啟通知的裝置'); }
+  catch { alert('連不到秘書'); }
+};
+
+// ---------- 登入與通知 ----------
 
 function showLogin(msg = '') {
+  for (const id of ['chat', 'chips', 'composer', 'report', 'tabs']) $(id).classList.add('hidden');
   $('login').classList.remove('hidden');
-  $('app').classList.add('hidden');
   $('loginMsg').textContent = msg;
 }
 
 function showApp() {
   $('login').classList.add('hidden');
-  $('app').classList.remove('hidden');
+  $('tabs').classList.remove('hidden');
   const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   const canPush = 'serviceWorker' in navigator && 'PushManager' in window;
   if (!standalone) {
@@ -75,12 +165,12 @@ function showApp() {
   } else if (canPush && Notification.permission !== 'granted') {
     $('notifyCard').classList.remove('hidden');
   }
-  load();
+  showTab(tab);
 }
 
 $('loginBtn').onclick = async () => {
   store.set('token', $('pw').value.trim());
-  try { await api('/report'); showApp(); } catch (e) { showLogin(e.auth ? '密碼不正確' : '連不到秘書，電腦可能關機了'); }
+  try { await api('/chat'); showApp(); } catch (e) { showLogin(e.auth ? '密碼不正確' : '連不到秘書，電腦可能關機了'); }
 };
 
 function urlB64(key) {
@@ -98,16 +188,12 @@ $('notifyBtn').onclick = async () => {
     await api('/subscribe', { method: 'POST', body: JSON.stringify(sub) });
     $('notifyMsg').textContent = '通知已開啟';
     $('notifyBtn').classList.add('hidden');
+    setTimeout(() => $('notifyCard').classList.add('hidden'), 1500);
   } catch (e) {
     $('notifyMsg').textContent = `開啟失敗：${e.message}`;
   }
 };
 
-$('refreshBtn').onclick = load;
-$('testBtn').onclick = async () => {
-  try { const r = await api('/test-push', { method: 'POST' }); alert(r.sent ? '已送出測試通知' : '還沒有開啟通知的裝置'); }
-  catch { alert('連不到秘書'); }
-};
-
+document.addEventListener('visibilitychange', () => { if (!document.hidden && store.get('token')) tab === 'chat' ? loadChat() : loadReport(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 store.get('token') ? showApp() : showLogin();
