@@ -77,12 +77,11 @@ function updateDot() {
   document.querySelector('#tabs button[data-tab="chat"]').classList.toggle('unread', unread);
 }
 
-// 畫面開著時每 5 秒問一次，順便讓電腦知道「老闆正在看 App」，就不會再跳推播
 async function poll() {
   clearTimeout(pollTimer);
   if (document.hidden || !store.get('token')) return;
   try {
-    const list = await api(`/chat?tab=${tab}`);
+    const list = await api('/chat');
     setOnline(true);
     if (JSON.stringify(list) !== JSON.stringify(messages)) {
       messages = list;
@@ -94,16 +93,10 @@ async function poll() {
     if (e.auth) return showLogin('密碼失效，請重新輸入');
     setOnline(false);
   }
-  pollTimer = setTimeout(poll, waiting() ? 2000 : 5000);
+  if (waiting()) pollTimer = setTimeout(poll, 2000);
 }
 
-function leave() {
-  clearTimeout(pollTimer);
-  fetch(API + '/presence', {
-    method: 'POST', keepalive: true, body: '{}',
-    headers: { 'ngrok-skip-browser-warning': '1', Authorization: `Bearer ${store.get('token') || ''}`, 'Content-Type': 'application/json' },
-  }).catch(() => {});
-}
+
 
 async function send(text) {
   text = text.trim();
@@ -228,10 +221,7 @@ $('notifyBtn').onclick = async () => {
   }
 };
 
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) return leave();
-  if (store.get('token')) showTab(tab);
-});
-addEventListener('pagehide', leave);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && store.get('token')) showTab(tab); });
+navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data === 'new-message') poll(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 store.get('token') ? showApp() : showLogin();

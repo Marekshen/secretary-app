@@ -1,4 +1,4 @@
-const CACHE = 'secretary-v7';
+const CACHE = 'secretary-v8';
 const SHELL = ['./', './index.html', './app.js', './manifest.webmanifest', './icon-192-v2.png'];
 
 self.addEventListener('install', (e) => {
@@ -24,7 +24,10 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   const d = e.data ? e.data.json() : {};
   if (d.badge && self.navigator.setAppBadge) self.navigator.setAppBadge(d.badge).catch(() => {});
-  e.waitUntil(self.registration.showNotification(d.title || '秘書', { body: d.body || '', icon: 'icon-192-v2.png', data: { url: d.url || './' } }));
+  e.waitUntil(Promise.all([
+    self.registration.showNotification(d.title || '秘書', { body: d.body || '', icon: 'icon-192-v2.png', data: { url: d.url || './' } }),
+    self.clients.matchAll({ type: 'window' }).then((list) => list.forEach((c) => c.postMessage('new-message'))),
+  ]));
 });
 
 self.addEventListener('notificationclick', (e) => {
