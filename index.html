@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>秘書</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f2a44">
+<style>
+  :root {
+    --navy: #0f2a44; --sea: #1f6f9f; --bg: #f3f6f9; --card: #fff; --ink: #1b2733; --mute: #6b7a89;
+    --up: #1c8a5a; --down: #c2453d; --line: #e3e9ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b1622; --card: #13212f; --ink: #e6edf3; --mute: #8fa1b3; --line: #22344a; --sea: #5aa9d6; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; }
+  header { background: var(--navy); color: #fff; padding: calc(env(safe-area-inset-top) + 16px) 16px 20px; }
+  header h1 { margin: 0; font-size: 22px; }
+  header .sub { opacity: .75; font-size: 13px; margin-top: 2px; }
+  main { padding: 16px; padding-bottom: calc(env(safe-area-inset-bottom) + 24px); max-width: 560px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .card h2 { font-size: 15px; margin: 0 0 12px; color: var(--mute); font-weight: 600; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat .v { font-size: 26px; font-weight: 700; }
+  .stat .l { font-size: 13px; color: var(--mute); }
+  .stat .d { font-size: 12px; }
+  .up { color: var(--up); } .down { color: var(--down); }
+  .item { padding: 10px 0; border-top: 1px solid var(--line); font-size: 15px; }
+  .item:first-of-type { border-top: 0; padding-top: 0; }
+  .item .meta { font-size: 12px; color: var(--mute); }
+  .item a { color: var(--sea); text-decoration: none; }
+  .badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; background: #fde8e6; color: var(--down); margin-left: 6px; }
+  button { font: inherit; border: 0; border-radius: 10px; padding: 12px 16px; background: var(--sea); color: #fff; width: 100%; font-weight: 600; }
+  button.ghost { background: transparent; color: var(--sea); border: 1px solid var(--line); }
+  input { font: inherit; width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); margin-bottom: 10px; }
+  .offline { background: #fff4d6; color: #7a5a00; border-radius: 10px; padding: 8px 12px; font-size: 13px; margin-bottom: 14px; }
+  .hint { font-size: 13px; color: var(--mute); margin: 8px 0 0; }
+  .hidden { display: none; }
+  .row { display: flex; gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>秘書</h1>
+  <div class="sub" id="updated">蘭尼斯特號 每日報告</div>
+</header>
+<main>
+  <section id="login" class="card hidden">
+    <h2>第一次使用，請輸入密碼</h2>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="App 密碼">
+    <button id="loginBtn">登入</button>
+    <p class="hint" id="loginMsg"></p>
+  </section>
+
+  <section id="app" class="hidden">
+    <div id="offline" class="offline hidden">秘書離線中（電腦可能關機），顯示的是上次的報告</div>
+
+    <div id="notifyCard" class="card hidden">
+      <h2>開啟通知</h2>
+      <button id="notifyBtn">允許秘書傳通知給我</button>
+      <p class="hint" id="notifyMsg"></p>
+    </div>
+
+    <div class="card">
+      <h2 id="pageTitle">粉專近 7 天</h2>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="card">
+      <h2>留言 <span id="unrepliedBadge"></span></h2>
+      <div id="comments"></div>
+    </div>
+
+    <div class="card">
+      <h2>最近貼文</h2>
+      <div id="posts"></div>
+    </div>
+
+    <div class="row">
+      <button class="ghost" id="refreshBtn">重新整理</button>
+      <button class="ghost" id="testBtn">測試通知</button>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
