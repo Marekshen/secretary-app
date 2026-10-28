@@ -127,8 +127,8 @@ async function send(text) {
 
 function autosize() {
   const t = $('input');
-  t.style.height = 'auto';
-  t.style.height = Math.min(t.scrollHeight, 120) + 'px';
+  t.style.height = '42px';
+  t.style.height = Math.min(t.scrollHeight + 2, 122) + 'px';
 }
 $('input').addEventListener('input', autosize);
 $('sendBtn').onclick = () => send($('input').value);
