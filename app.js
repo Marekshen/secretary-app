@@ -52,10 +52,16 @@ function renderChat() {
   const box = $('msgs');
   const atBottom = $('chat').scrollHeight - $('chat').scrollTop - $('chat').clientHeight < 80;
   box.innerHTML = messages.length
-    ? messages.map((m) => `<div class="msg ${m.role}">${linkify(m.text)}<time>${tw(m.time)}</time></div>`).join('')
+    ? messages.map((m) => `<div class="msg ${m.role} ${m.kind || ''}">${m.kind === 'notice' ? '<b class="tag">通知</b>' : ''}${linkify(m.text)}<time>${tw(m.time)}</time></div>`).join('')
       + (waiting() ? '<div class="typing">秘書處理中…</div>' : '')
     : '<p class="hint">交代秘書事情，例如「今天有什麼行程」「摘要今天的郵件」。處理比較久時，回覆好了會傳通知給你。</p>';
   if (atBottom || waiting()) $('chat').scrollTop = $('chat').scrollHeight;
+}
+
+function markRead() {
+  if (document.hidden) return;
+  navigator.clearAppBadge?.().catch(() => {});
+  api('/read', { method: 'POST', body: '{}' }).catch(() => {});
 }
 
 async function loadChat() {
@@ -64,6 +70,7 @@ async function loadChat() {
   try {
     const list = await api('/chat');
     setOnline(true);
+    markRead();
     if (JSON.stringify(list) !== JSON.stringify(messages)) { messages = list; store.set('chat', JSON.stringify(list)); renderChat(); }
   } catch (e) {
     if (e.auth) return showLogin('密碼失效，請重新輸入');
