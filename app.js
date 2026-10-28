@@ -38,7 +38,10 @@ function showTab(name) {
   $('chips').classList.toggle('hidden', name !== 'chat');
   $('composer').classList.toggle('hidden', name !== 'chat');
   $('report').classList.toggle('hidden', name !== 'report');
-  name === 'chat' ? loadChat() : loadReport();
+  if (name === 'chat') { renderChat(); $('chat').scrollTop = $('chat').scrollHeight; markRead(); }
+  else loadReport();
+  updateDot();
+  poll();
 }
 for (const b of document.querySelectorAll('#tabs button')) b.onclick = () => showTab(b.dataset.tab);
 
@@ -58,26 +61,48 @@ function renderChat() {
   if (atBottom || waiting()) $('chat').scrollTop = $('chat').scrollHeight;
 }
 
+const lastSecretaryTime = () => messages.filter((m) => m.role === 'secretary').at(-1)?.time || '';
+
 function markRead() {
-  if (document.hidden) return;
+  if (document.hidden || !messages.length) return;
+  const t = lastSecretaryTime();
+  if (store.get('readAt') === t) return;
+  store.set('readAt', t);
   navigator.clearAppBadge?.().catch(() => {});
   api('/read', { method: 'POST', body: '{}' }).catch(() => {});
 }
 
-async function loadChat() {
-  const cached = store.get('chat');
-  if (cached && !messages.length) { messages = JSON.parse(cached); renderChat(); }
+function updateDot() {
+  const unread = tab !== 'chat' && lastSecretaryTime() > (store.get('readAt') || '');
+  document.querySelector('#tabs button[data-tab="chat"]').classList.toggle('unread', unread);
+}
+
+// 畫面開著時每 5 秒問一次，順便讓電腦知道「老闆正在看 App」，就不會再跳推播
+async function poll() {
+  clearTimeout(pollTimer);
+  if (document.hidden || !store.get('token')) return;
   try {
-    const list = await api('/chat');
+    const list = await api(`/chat?tab=${tab}`);
     setOnline(true);
-    markRead();
-    if (JSON.stringify(list) !== JSON.stringify(messages)) { messages = list; store.set('chat', JSON.stringify(list)); renderChat(); }
+    if (JSON.stringify(list) !== JSON.stringify(messages)) {
+      messages = list;
+      store.set('chat', JSON.stringify(list));
+      if (tab === 'chat') { renderChat(); markRead(); }
+    }
+    updateDot();
   } catch (e) {
     if (e.auth) return showLogin('密碼失效，請重新輸入');
     setOnline(false);
   }
+  pollTimer = setTimeout(poll, waiting() ? 2000 : 5000);
+}
+
+function leave() {
   clearTimeout(pollTimer);
-  if (waiting() && tab === 'chat' && !document.hidden) pollTimer = setTimeout(loadChat, 3000);
+  fetch(API + '/presence', {
+    method: 'POST', keepalive: true, body: '{}',
+    headers: { 'ngrok-skip-browser-warning': '1', Authorization: `Bearer ${store.get('token') || ''}`, 'Content-Type': 'application/json' },
+  }).catch(() => {});
 }
 
 async function send(text) {
@@ -92,7 +117,7 @@ async function send(text) {
     renderChat();
     $('chat').scrollTop = $('chat').scrollHeight;
     clearTimeout(pollTimer);
-    pollTimer = setTimeout(loadChat, 3000);
+    pollTimer = setTimeout(poll, 2000);
   } catch (e) {
     alert(e.auth ? '密碼失效' : '送不出去，秘書可能離線了');
   } finally {
@@ -172,12 +197,14 @@ function showApp() {
   } else if (canPush && Notification.permission !== 'granted') {
     $('notifyCard').classList.remove('hidden');
   }
+  const cached = store.get('chat');
+  if (cached && !messages.length) messages = JSON.parse(cached);
   showTab(tab);
 }
 
 $('loginBtn').onclick = async () => {
   store.set('token', $('pw').value.trim());
-  try { await api('/chat'); showApp(); } catch (e) { showLogin(e.auth ? '密碼不正確' : '連不到秘書，電腦可能關機了'); }
+  try { await api('/report'); showApp(); } catch (e) { showLogin(e.auth ? '密碼不正確' : '連不到秘書，電腦可能關機了'); }
 };
 
 function urlB64(key) {
@@ -201,6 +228,10 @@ $('notifyBtn').onclick = async () => {
   }
 };
 
-document.addEventListener('visibilitychange', () => { if (!document.hidden && store.get('token')) tab === 'chat' ? loadChat() : loadReport(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return leave();
+  if (store.get('token')) showTab(tab);
+});
+addEventListener('pagehide', leave);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 store.get('token') ? showApp() : showLogin();

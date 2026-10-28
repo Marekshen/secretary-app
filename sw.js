@@ -1,4 +1,4 @@
-const CACHE = 'secretary-v5';
+const CACHE = 'secretary-v6';
 const SHELL = ['./', './index.html', './app.js', './manifest.webmanifest', './icon-192-v2.png'];
 
 self.addEventListener('install', (e) => {
