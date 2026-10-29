@@ -61,7 +61,14 @@ function renderChat() {
   if (atBottom || waiting()) $('chat').scrollTop = $('chat').scrollHeight;
 }
 
-const lastSecretaryTime = () => messages.filter((m) => m.role === 'secretary').at(-1)?.time || '';
+let stick = true;
+$('chat').addEventListener('scroll', () => {
+  const c = $('chat');
+  stick = c.scrollHeight - c.scrollTop - c.clientHeight < 80;
+});
+new ResizeObserver(() => { if (stick) $('chat').scrollTop = $('chat').scrollHeight; }).observe($('chat'));
+
+const lastSecretaryTime =() => messages.filter((m) => m.role === 'secretary').at(-1)?.time || '';
 
 function markRead() {
   if (document.hidden || !messages.length) return;

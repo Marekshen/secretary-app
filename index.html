@@ -19,6 +19,7 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
+  body { height: 100dvh; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; display: flex; flex-direction: column; }
   header { background: var(--navy); color: #fff; padding: calc(env(safe-area-inset-top) + 10px) 16px 0; flex: none; }
   .top { display: flex; align-items: center; gap: 10px; }
@@ -64,7 +65,7 @@
   .typing { align-self: flex-start; color: var(--mute); font-size: 14px; }
   .chips { display: flex; gap: 8px; overflow-x: auto; padding: 8px 16px 0; flex: none; }
   .chips button { width: auto; flex: none; padding: 6px 12px; border-radius: 16px; font-size: 14px; font-weight: 500; background: var(--card); color: var(--sea); border: 1px solid var(--line); }
-  .composer { flex: none; display: flex; gap: 8px; padding: 8px 16px calc(env(safe-area-inset-bottom) + 8px); background: var(--bg); align-items: flex-end; }
+  .composer { flex: none; display: flex; gap: 8px; padding: 8px 16px max(env(safe-area-inset-bottom), 8px); background: var(--bg); align-items: flex-end; }
   .composer textarea { flex: 1; min-width: 0; width: auto; resize: none; height: 42px; max-height: 122px; line-height: 20px; padding: 10px 12px; display: block; }
   .composer button { width: auto; height: 42px; padding: 0 16px; line-height: 42px; flex: none; }
 </style>
