@@ -105,12 +105,22 @@ async function poll() {
 
 
 
+const getLocation = () => new Promise((resolve) => {
+  if (!navigator.geolocation) return resolve(null);
+  navigator.geolocation.getCurrentPosition(
+    (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }),
+    () => resolve(null),
+    { maximumAge: 300000, timeout: 5000 },
+  );
+});
+
 async function send(text) {
   text = text.trim();
   if (!text) return;
   $('sendBtn').disabled = true;
   try {
-    const msg = await api('/chat', { method: 'POST', body: JSON.stringify({ text }) });
+    const loc = await getLocation();
+    const msg = await api('/chat', { method: 'POST', body: JSON.stringify({ text, loc }) });
     messages.push(msg);
     $('input').value = '';
     autosize();
