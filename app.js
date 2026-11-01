@@ -1,4 +1,4 @@
-const VERSION = 'v16';
+const VERSION = 'v17';
 const API = 'https://dictation-moonrise-subplot.ngrok-free.dev/api';
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -168,9 +168,7 @@ function fitViewport() {
   const vv = window.visualViewport;
   if (!vv) return;
   const kb = vv.height < window.innerHeight - 100;
-  const portrait = window.innerHeight > window.innerWidth;
-  const full = isStandalone() ? Math.max(window.innerHeight, portrait ? screen.height : screen.width) : window.innerHeight;
-  document.documentElement.style.setProperty('--app-h', `${kb ? vv.height : full}px`);
+  document.documentElement.style.setProperty('--app-h', `${kb ? vv.height : window.innerHeight}px`);
   document.body.classList.toggle('kb', kb);
   window.scrollTo(0, 0);
 }
