@@ -1,4 +1,4 @@
-const VERSION = 'v15';
+const VERSION = 'v16';
 const API = 'https://dictation-moonrise-subplot.ngrok-free.dev/api';
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -295,5 +295,5 @@ $('notifyBtn').onclick = async () => {
 
 document.addEventListener('visibilitychange', () => { if (!document.hidden && store.get('token')) showTab(tab); });
 navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data === 'new-message') poll(); });
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
 store.get('token') ? showApp() : showLogin();
