@@ -115,12 +115,14 @@ const getLocation = () => new Promise((resolve) => {
   );
 });
 
+const NEEDS_LOC = /天氣|下雨|氣溫|溫度|風|浪|潮|出海|附近|這裡|這邊|現在在|我在哪|電影|戲院|餐廳|吃|咖啡|加油|停車|路線|怎麼去|多遠|位置/;
+
 async function send(text) {
   text = text.trim();
   if (!text) return;
   $('sendBtn').disabled = true;
   try {
-    const loc = await getLocation();
+    const loc = NEEDS_LOC.test(text) ? await getLocation() : null;
     const msg = await api('/chat', { method: 'POST', body: JSON.stringify({ text, loc }) });
     messages.push(msg);
     $('input').value = '';
