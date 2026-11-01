@@ -159,16 +159,42 @@ $('clearBtn').onclick = async () => {
   }
 };
 
+const isStandalone = () => navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+
 function fitViewport() {
   const vv = window.visualViewport;
   if (!vv) return;
-  document.documentElement.style.setProperty('--app-h', `${vv.height}px`);
-  document.body.classList.toggle('kb', vv.height < window.innerHeight - 100);
+  const kb = vv.height < window.innerHeight - 100;
+  const portrait = window.innerHeight > window.innerWidth;
+  const full = isStandalone() ? Math.max(window.innerHeight, portrait ? screen.height : screen.width) : window.innerHeight;
+  document.documentElement.style.setProperty('--app-h', `${kb ? vv.height : full}px`);
+  document.body.classList.toggle('kb', kb);
   window.scrollTo(0, 0);
+}
+
+function reportLayout() {
+  setTimeout(() => {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);visibility:hidden';
+    document.body.append(probe);
+    const cs = getComputedStyle(probe);
+    const rect = (id) => { const r = $(id).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; };
+    const d = {
+      ua: navigator.userAgent, standalone: isStandalone(), dpr: devicePixelRatio,
+      screen: [screen.width, screen.height], inner: [innerWidth, innerHeight],
+      vv: window.visualViewport && [visualViewport.width, visualViewport.height, visualViewport.offsetTop],
+      docEl: document.documentElement.clientHeight, safe: [cs.paddingTop, cs.paddingBottom],
+      body: rect('composer').length && [document.body.getBoundingClientRect().top, document.body.getBoundingClientRect().bottom],
+      composer: rect('composer'), appH: document.documentElement.style.getPropertyValue('--app-h'),
+    };
+    probe.remove();
+    api('/diag', { method: 'POST', body: JSON.stringify(d) }).catch(() => {});
+  }, 1500);
 }
 window.visualViewport?.addEventListener('resize', fitViewport);
 window.visualViewport?.addEventListener('scroll', fitViewport);
 fitViewport();
+reportLayout();
 
 // ---------- 粉專報告 ----------
 
