@@ -1,3 +1,4 @@
+const VERSION = 'v15';
 const API = 'https://dictation-moonrise-subplot.ngrok-free.dev/api';
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -160,6 +161,8 @@ $('clearBtn').onclick = async () => {
 };
 
 const isStandalone = () => navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+
+$('ver').textContent = VERSION;
 
 function fitViewport() {
   const vv = window.visualViewport;

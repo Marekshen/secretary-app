@@ -25,6 +25,7 @@
   .top { display: flex; align-items: center; gap: 10px; }
   .top img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
   .top h1 { margin: 0; font-size: 19px; }
+  .top h1 small { font-size: 12px; font-weight: 400; opacity: .6; }
   .top .sub { font-size: 12px; opacity: .75; }
   .top #clearBtn { margin-left: auto; width: auto; padding: 6px 12px; font-size: 13px; font-weight: 500; background: rgba(255,255,255,.12); color: #fff; border-radius: 14px; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #5bd18b; margin-right: 4px; }
@@ -77,7 +78,7 @@
   <div class="top">
     <img src="icon-192-v2.png" alt="">
     <div>
-      <h1>秘書</h1>
+      <h1>秘書 <small id="ver"></small></h1>
       <div class="sub" id="status"><span class="dot"></span>連線中</div>
     </div>
     <button id="clearBtn" class="hidden">清除對話</button>
