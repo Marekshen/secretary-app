@@ -18,14 +18,15 @@
     :root { --bg: #0b1622; --card: #13212f; --ink: #e6edf3; --mute: #8fa1b3; --line: #22344a; --sea: #5aa9d6; --me: #2b6f9a; --her: #13212f; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
-  body { height: 100dvh; }
+  html { height: 100%; overflow: hidden; }
+  body { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100%); overflow: hidden; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; display: flex; flex-direction: column; }
   header { background: var(--navy); color: #fff; padding: calc(env(safe-area-inset-top) + 10px) 16px 0; flex: none; }
   .top { display: flex; align-items: center; gap: 10px; }
   .top img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
   .top h1 { margin: 0; font-size: 19px; }
   .top .sub { font-size: 12px; opacity: .75; }
+  .top #clearBtn { margin-left: auto; width: auto; padding: 6px 12px; font-size: 13px; font-weight: 500; background: rgba(255,255,255,.12); color: #fff; border-radius: 14px; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #5bd18b; margin-right: 4px; }
   .dot.off { background: #f0b429; }
   nav { display: flex; margin-top: 8px; }
@@ -67,6 +68,7 @@
   .chips button { width: auto; flex: none; padding: 6px 12px; border-radius: 16px; font-size: 14px; font-weight: 500; background: var(--card); color: var(--sea); border: 1px solid var(--line); }
   .composer { flex: none; display: flex; gap: 8px; padding: 8px 16px max(env(safe-area-inset-bottom), 8px); background: var(--bg); align-items: flex-end; }
   .composer textarea { flex: 1; min-width: 0; width: auto; resize: none; height: 42px; max-height: 122px; line-height: 20px; padding: 10px 12px; display: block; }
+  body.kb .composer { padding-bottom: 8px; }
   .composer button { width: auto; height: 42px; padding: 0 16px; line-height: 42px; flex: none; }
 </style>
 </head>
@@ -78,6 +80,7 @@
       <h1>秘書</h1>
       <div class="sub" id="status"><span class="dot"></span>連線中</div>
     </div>
+    <button id="clearBtn" class="hidden">清除對話</button>
   </div>
   <nav id="tabs" class="hidden">
     <button data-tab="chat" class="on">對話</button>

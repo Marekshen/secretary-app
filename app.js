@@ -38,6 +38,7 @@ function showTab(name) {
   $('chips').classList.toggle('hidden', name !== 'chat');
   $('composer').classList.toggle('hidden', name !== 'chat');
   $('report').classList.toggle('hidden', name !== 'report');
+  $('clearBtn').classList.toggle('hidden', name !== 'chat');
   if (name === 'chat') { renderChat(); $('chat').scrollTop = $('chat').scrollHeight; markRead(); }
   else loadReport();
   updateDot();
@@ -71,11 +72,11 @@ new ResizeObserver(() => { if (stick) $('chat').scrollTop = $('chat').scrollHeig
 const lastSecretaryTime =() => messages.filter((m) => m.role === 'secretary').at(-1)?.time || '';
 
 function markRead() {
-  if (document.hidden || !messages.length) return;
-  const t = lastSecretaryTime();
-  if (store.get('readAt') === t) return;
-  store.set('readAt', t);
+  if (document.hidden) return;
   navigator.clearAppBadge?.().catch(() => {});
+  const t = lastSecretaryTime();
+  if (!messages.length || store.get('readAt') === t) return;
+  store.set('readAt', t);
   api('/read', { method: 'POST', body: '{}' }).catch(() => {});
 }
 
@@ -144,6 +145,29 @@ $('input').addEventListener('input', autosize);
 $('sendBtn').onclick = () => send($('input').value);
 for (const b of document.querySelectorAll('#chips button')) b.onclick = () => send(b.textContent);
 
+$('clearBtn').onclick = async () => {
+  if (!confirm('確定要清除所有對話嗎？秘書也會忘記之前的內容。')) return;
+  try {
+    await api('/clear', { method: 'POST', body: '{}' });
+    messages = [];
+    store.set('chat', '[]');
+    renderChat();
+  } catch (e) {
+    alert(e.auth ? '密碼失效' : '清除失敗，秘書可能離線了');
+  }
+};
+
+function fitViewport() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  document.documentElement.style.setProperty('--app-h', `${vv.height}px`);
+  document.body.classList.toggle('kb', vv.height < window.innerHeight - 100);
+  window.scrollTo(0, 0);
+}
+window.visualViewport?.addEventListener('resize', fitViewport);
+window.visualViewport?.addEventListener('scroll', fitViewport);
+fitViewport();
+
 // ---------- 粉專報告 ----------
 
 function renderReport(r) {
@@ -190,7 +214,7 @@ $('testBtn').onclick = async () => {
 // ---------- 登入與通知 ----------
 
 function showLogin(msg = '') {
-  for (const id of ['chat', 'chips', 'composer', 'report', 'tabs']) $(id).classList.add('hidden');
+  for (const id of ['chat', 'chips', 'composer', 'report', 'tabs', 'clearBtn']) $(id).classList.add('hidden');
   $('login').classList.remove('hidden');
   $('loginMsg').textContent = msg;
 }
