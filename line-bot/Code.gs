@@ -6,15 +6,16 @@
 const CONFIG = {
   STUDIO_NAME: '工作室',
   SERVICE_NAME: '諮詢預約',
-  BOOKING_URL: '', // 貼上「諮詢預約」的預約頁網址
+  BOOKING_URL: 'https://calendar.app.google/RtAwZ5BKprS5S2nH6',
   SLOT_MINUTES: 60,
   // 要跟「諮詢預約」設定的可預約時段一致。0=週日 … 6=週六，[開始, 結束]（24 小時制，可用 13.5 表示 13:30）
+  // 臨時不接預約的日子：在「工作室排班」加一個全天活動（例如「不接預約」），機器人和預約頁都會擋掉
   OPEN_HOURS: {
+    1: [10, 19],
     2: [10, 19],
     3: [10, 19],
     4: [10, 19],
     5: [10, 19],
-    6: [10, 19],
   },
   DAYS_AHEAD: 14,       // 最多查幾天內
   MIN_NOTICE_HOURS: 3,  // 至少幾小時前預約
