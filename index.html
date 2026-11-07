@@ -71,6 +71,17 @@
   .composer textarea { flex: 1; min-width: 0; width: auto; resize: none; height: 42px; max-height: 122px; line-height: 20px; padding: 10px 12px; display: block; }
   body.kb .composer { padding-bottom: 8px; }
   .composer button { width: auto; height: 42px; padding: 0 16px; line-height: 42px; flex: none; }
+  .composer #picBtn { padding: 0; width: 42px; background: var(--card); color: var(--sea); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
+  .composer #picBtn svg { width: 22px; height: 22px; }
+  .attach { flex: none; padding: 8px 16px 0; background: var(--bg); }
+  .attach div { position: relative; display: inline-block; }
+  .attach img { display: block; height: 72px; max-width: 160px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+  .attach button { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; padding: 0; border-radius: 50%; background: #000a; font-size: 13px; line-height: 22px; }
+  .msg .pic { display: block; max-width: 100%; max-height: 300px; border-radius: 10px; margin: 2px 0 6px; object-fit: contain; }
+  .msg .pic.loading { width: 160px; height: 120px; background: var(--line); }
+  .msg .pic-err { display: block; font-size: 13px; opacity: .7; }
+  .viewer { position: fixed; inset: 0; z-index: 10; background: #000e; display: flex; align-items: center; justify-content: center; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  .viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
 </style>
 </head>
 <body>
@@ -119,7 +130,10 @@
   <button>摘要今天的郵件</button>
   <button>這週有什麼重要的事</button>
 </div>
+<div id="attach" class="attach hidden"><div><img id="attachImg" alt="要傳的圖片"><button id="attachDel" aria-label="移除圖片">✕</button></div></div>
 <div id="composer" class="composer hidden">
+  <button id="picBtn" aria-label="傳圖片"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg></button>
+  <input id="picInput" type="file" accept="image/*" class="hidden">
   <textarea id="input" rows="1" placeholder="交代秘書…"></textarea>
   <button id="sendBtn">送出</button>
 </div>
@@ -146,6 +160,7 @@
     </div>
   </div>
 </section>
+<div id="viewer" class="viewer hidden"><img id="viewerImg" alt=""></div>
 <script src="app.js"></script>
 </body>
 </html>

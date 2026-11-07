@@ -1,4 +1,4 @@
-const VERSION = 'v17';
+const VERSION = 'v18';
 const API = 'https://dictation-moonrise-subplot.ngrok-free.dev/api';
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -38,6 +38,7 @@ function showTab(name) {
   $('chat').classList.toggle('hidden', name !== 'chat');
   $('chips').classList.toggle('hidden', name !== 'chat');
   $('composer').classList.toggle('hidden', name !== 'chat');
+  $('attach').classList.toggle('hidden', name !== 'chat' || !pending);
   $('report').classList.toggle('hidden', name !== 'report');
   $('clearBtn').classList.toggle('hidden', name !== 'chat');
   if (name === 'chat') { renderChat(); $('chat').scrollTop = $('chat').scrollHeight; markRead(); }
@@ -57,11 +58,87 @@ function renderChat() {
   const box = $('msgs');
   const atBottom = $('chat').scrollHeight - $('chat').scrollTop - $('chat').clientHeight < 80;
   box.innerHTML = messages.length
-    ? messages.map((m) => `<div class="msg ${m.role} ${m.kind || ''}">${m.kind === 'notice' ? '<b class="tag">通知</b>' : ''}${linkify(m.text)}<time>${tw(m.time)}</time></div>`).join('')
+    ? messages.map((m) => `<div class="msg ${m.role} ${m.kind || ''}">${m.kind === 'notice' ? '<b class="tag">通知</b>' : ''}${imgTag(m.image)}${linkify(m.text)}<time>${tw(m.time)}</time></div>`).join('')
       + (waiting() ? '<div class="typing">秘書處理中…</div>' : '')
     : '<p class="hint">交代秘書事情，例如「今天有什麼行程」「摘要今天的郵件」。處理比較久時，回覆好了會傳通知給你。</p>';
   if (atBottom || waiting()) $('chat').scrollTop = $('chat').scrollHeight;
+  for (const img of box.querySelectorAll('img[data-src]')) loadImg(img);
 }
+
+// ---------- 圖片 ----------
+
+// 伺服器上的圖片要帶 Authorization 和 ngrok header 才拿得到，所以用 fetch 轉成 blob URL
+const imgCache = new Map();
+const imgSrc = (img) => (typeof img === 'string' ? img : img?.url || '');
+function imgTag(img) {
+  const src = imgSrc(img);
+  if (!src) return '';
+  const ready = imgCache.get(src) || (/^(data:|blob:)/.test(src) ? src : '');
+  return ready
+    ? `<img class="pic" src="${esc(ready)}" alt="圖片">`
+    : `<img class="pic loading" data-src="${esc(src)}" alt="圖片">`;
+}
+async function loadImg(el) {
+  const src = el.dataset.src;
+  el.removeAttribute('data-src');
+  try {
+    let url = imgCache.get(src);
+    if (!url) {
+      const abs = /^https?:/.test(src) ? src : API.replace(/\/api$/, '') + (src.startsWith('/') ? '' : '/') + src;
+      const res = await fetch(abs, { headers: { 'ngrok-skip-browser-warning': '1', Authorization: `Bearer ${store.get('token') || ''}` } });
+      if (!res.ok) throw new Error(res.status);
+      url = URL.createObjectURL(await res.blob());
+      imgCache.set(src, url);
+    }
+    el.src = url;
+    el.classList.remove('loading');
+  } catch {
+    el.replaceWith(Object.assign(document.createElement('span'), { className: 'pic-err', textContent: '（圖片載入失敗）' }));
+  }
+}
+$('msgs').addEventListener('click', (e) => {
+  if (e.target.classList.contains('pic') && !e.target.classList.contains('loading')) {
+    $('viewerImg').src = e.target.src;
+    $('viewer').classList.remove('hidden');
+  }
+});
+$('viewer').onclick = () => $('viewer').classList.add('hidden');
+
+// 縮到長邊 1600px、轉 JPEG，iPhone 的 HEIC 也會被 Safari 解碼後轉成 JPEG
+async function shrink(file, max = 1600, quality = 0.85) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = url; });
+    const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * scale);
+    c.height = Math.round(img.naturalHeight * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', quality);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+let pending = null; // { dataUrl, name }
+function showPending() {
+  $('attach').classList.toggle('hidden', !pending);
+  if (pending) $('attachImg').src = pending.dataUrl;
+}
+$('picBtn').onclick = () => $('picInput').click();
+$('picInput').onchange = async () => {
+  const file = $('picInput').files[0];
+  $('picInput').value = '';
+  if (!file) return;
+  try {
+    pending = { dataUrl: await shrink(file), name: file.name || 'photo.jpg' };
+  } catch {
+    alert('這張圖片讀不出來，換一張試試');
+    pending = null;
+  }
+  showPending();
+};
+$('attachDel').onclick = () => { pending = null; showPending(); };
 
 let stick = true;
 $('chat').addEventListener('scroll', () => {
@@ -120,11 +197,20 @@ const NEEDS_LOC = /天氣|下雨|氣溫|溫度|風|浪|潮|出海|附近|這裡|
 
 async function send(text) {
   text = text.trim();
-  if (!text) return;
+  const pic = pending;
+  if (!text && !pic) return;
   $('sendBtn').disabled = true;
   try {
     const loc = NEEDS_LOC.test(text) ? await getLocation() : null;
-    const msg = await api('/chat', { method: 'POST', body: JSON.stringify({ text, loc }) });
+    const image = pic ? { mime: 'image/jpeg', name: pic.name, data: pic.dataUrl.split(',')[1] } : undefined;
+    const msg = await api('/chat', { method: 'POST', body: JSON.stringify({ text, loc, image }) });
+    if (pic) {
+      // 先用本機這張顯示，不必再從伺服器下載
+      if (imgSrc(msg.image)) imgCache.set(imgSrc(msg.image), pic.dataUrl);
+      else msg.image = pic.dataUrl;
+      pending = null;
+      showPending();
+    }
     messages.push(msg);
     $('input').value = '';
     autosize();
@@ -133,7 +219,7 @@ async function send(text) {
     clearTimeout(pollTimer);
     pollTimer = setTimeout(poll, 2000);
   } catch (e) {
-    alert(e.auth ? '密碼失效' : '送不出去，秘書可能離線了');
+    alert(e.auth ? '密碼失效' : /HTTP 413/.test(e.message) ? '圖片太大，秘書收不下' : '送不出去，秘書可能離線了');
   } finally {
     $('sendBtn').disabled = false;
   }
@@ -243,7 +329,7 @@ $('testBtn').onclick = async () => {
 // ---------- 登入與通知 ----------
 
 function showLogin(msg = '') {
-  for (const id of ['chat', 'chips', 'composer', 'report', 'tabs', 'clearBtn']) $(id).classList.add('hidden');
+  for (const id of ['chat', 'chips', 'composer', 'attach', 'report', 'tabs', 'clearBtn']) $(id).classList.add('hidden');
   $('login').classList.remove('hidden');
   $('loginMsg').textContent = msg;
 }
