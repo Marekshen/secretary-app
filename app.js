@@ -1,4 +1,4 @@
-const VERSION = 'v17';
+const VERSION = 'v18';
 const API = 'https://dictation-moonrise-subplot.ngrok-free.dev/api';
 const $ = (id) => document.getElementById(id);
 const store = {
