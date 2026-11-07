@@ -221,20 +221,25 @@ function renderReport(r) {
   ).join('');
 }
 
-async function loadReport() {
+async function loadReport(refresh = false) {
   const cached = store.get('report');
   if (cached) renderReport(JSON.parse(cached));
+  const btn = $('refreshBtn');
+  if (refresh) { btn.disabled = true; btn.textContent = '更新中…'; }
   try {
-    const r = await api('/report');
+    const r = await api(refresh ? '/report/refresh' : '/report', refresh ? { method: 'POST' } : {});
     store.set('report', JSON.stringify(r));
     renderReport(r);
     setOnline(true);
   } catch (e) {
     if (e.auth) return showLogin('密碼失效，請重新輸入');
-    setOnline(false);
+    if (refresh) alert('更新失敗，秘書可能離線了');
+    else setOnline(false);
+  } finally {
+    if (refresh) { btn.disabled = false; btn.textContent = '重新整理'; }
   }
 }
-$('refreshBtn').onclick = loadReport;
+$('refreshBtn').onclick = () => loadReport(true);
 $('testBtn').onclick = async () => {
   try { const r = await api('/test-push', { method: 'POST' }); alert(r.sent ? '已送出測試通知' : '還沒有開啟通知的裝置'); }
   catch { alert('連不到秘書'); }
